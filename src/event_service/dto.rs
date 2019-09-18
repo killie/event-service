@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Event {
-    pub id: u64,
+    pub id: i64,
     pub from: i64,
     pub to: i64, // If it is an instant then from and to is the same
     pub origin: String,
@@ -37,9 +37,8 @@ pub struct EventType {
 
 #[derive(Serialize, Deserialize)]
 pub struct Comment {
-    pub id: u64,
-    pub event_id: u64,
+    pub id: i64,
+    pub event_id: i64,
     pub user: String,
     pub text: String,
 }
-

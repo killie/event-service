@@ -1,13 +1,13 @@
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate diesel;
-
+use std::env;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use futures::future::FutureResult;
 
-mod schema;
+#[path = "dto.rs"]
+mod dto;
+#[path = "models.rs"]
 mod models;
+
 
 const DEFAULT_DB_URL: &'static str = "postgres://postgres@localhost:5432";
 
@@ -16,17 +16,22 @@ pub fn connect_to_db() -> Option<PgConnection> {
     match PgConnection::establish(&db_url) {
         Ok(connection) => Some(connection),
         Err(error) => {
-            println!("Could not connect to database: {}", error.description());
+            println!("Could not connect to database: {:?}", error);
             None
         }
     }
 }
 
 pub fn insert_comment(
-    new_comment: NewComment,
+    comment: dto::Comment,
     db_connection: &PgConnection,
 ) -> FutureResult<i64, hyper::Error> {
-    use schema::comments;
+    //use schema::comments;
+    let new_comment = models::NewComment {
+        event_id: comment.event_id,
+        username: comment.user,
+        message: comment.text,
+    };
     let id = diesel::insert_into(comments::table)
         .values(&new_comment)
         .returning(comments::id)

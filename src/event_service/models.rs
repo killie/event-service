@@ -1,7 +1,14 @@
+// Database tables. These should be internal. Database can accept DTO as input and output.
+// Things like NewComment, is that 
+
+use serde::{Serialize};
+use diesel::{Queryable, Insertable};
+
+use self::schema::{comments};
 
 #[derive(Queryable, Serialize, Debug)]
 pub struct Event {
-    pub id: u64,
+    pub id: i64,
     pub from: i64,
     pub to: i64, // If it is an instant then from and to is the same
     pub origin_id: u32,
@@ -24,9 +31,9 @@ pub struct Source {
 
 #[derive(Queryable, Serialize, Debug)]
 pub struct EventSource {
-    pub id: u64,
-    pub event_id: u64,
-    pub source_id: u64,
+    pub id: i64,
+    pub event_id: i64,
+    pub source_id: i64,
 }
 
 #[derive(Queryable, Serialize, Debug)]

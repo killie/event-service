@@ -2,14 +2,16 @@
 
 extern crate hyper;
 extern crate futures;
+#[macro_use]
+extern crate diesel;
 //extern crate pretty_env_logger;
 
 use hyper::{Body, Error, Request, Response, Server, Method, StatusCode};
 use hyper::service::service_fn;
 use futures::{future, Future};
-//use event_service::models;
+use event_service::db;
 
-//mod event_service;
+mod event_service;
 
 
 // https://hyper.rs/guides/server/echo/ says just a simple type alias
@@ -18,13 +20,24 @@ use futures::{future, Future};
 type OriginId = u64;
 type SourceId = u64;
 
-const ORIGIN_PATH: &str = "/origin/";
-const SOURCE_PATH: &str = "/source/";
+const COMMENTS_PATH: &str = "/comments";
 
 fn rest_handler(request: Request<Body>) -> impl Future<Item=Response<Body>, Error=Error> {
     println!("{:?}", request);
     let response = {
-        response_with_code(StatusCode::OK)
+        //response_with_code(StatusCode::OK)
+        match (request.method(), request.uri().path()) {
+            (&Method::POST, COMMENTS_PATH) => {
+                println!("--> Inserting new comment: {:?}", request.body());
+                
+                
+                response_with_code(StatusCode::OK)
+            },
+            _ => {
+                println!("--> Nope.");
+                response_with_code(StatusCode::METHOD_NOT_ALLOWED)
+            },
+        }
     };
     future::ok(response)
 }

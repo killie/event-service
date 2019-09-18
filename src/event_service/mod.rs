@@ -1,5 +1,4 @@
 pub mod db;
 pub mod dto;
-pub mod models;
-pub mod schema;
-
+mod models;
+mod schema;
