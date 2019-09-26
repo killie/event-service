@@ -4,7 +4,7 @@
 use serde::{Serialize};
 use diesel::{Queryable, Insertable};
 
-use self::schema::{comments};
+//use self::schema::{comments};
 
 #[derive(Queryable, Serialize, Debug)]
 pub struct Event {
@@ -53,6 +53,7 @@ pub struct Comment {
     pub timestamp: i64,
 }
 
+/*
 #[derive(Insertable, Debug)]
 #[table_name = "comments"]
 pub struct NewComment {
@@ -60,5 +61,5 @@ pub struct NewComment {
     pub username: String,
     pub message: String,
 } // TODO: Timestamp should come from timer engine (client) and not system
-
+*/
 

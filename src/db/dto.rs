@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Event {
     pub id: i64,
     pub from: i64,
@@ -35,7 +35,7 @@ pub struct EventType {
     pub description: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Comment {
     pub id: i64,
     pub event_id: i64,

@@ -9,10 +9,11 @@ extern crate diesel;
 use hyper::{Body, Error, Request, Response, Server, Method, StatusCode};
 use hyper::service::service_fn;
 use futures::{future, Future};
-use event_service::db;
 
-mod event_service;
+mod db;
 
+pub use crate::db::events;
+pub use crate::db::comments;
 
 // https://hyper.rs/guides/server/echo/ says just a simple type alias
 //type BoxFut = Box<dyn Future<Item=Response<Body>, Error=hyper::Error> + Send>;
@@ -29,10 +30,24 @@ fn rest_handler(request: Request<Body>) -> impl Future<Item=Response<Body>, Erro
         match (request.method(), request.uri().path()) {
             (&Method::POST, COMMENTS_PATH) => {
                 println!("--> Inserting new comment: {:?}", request.body());
-                
-                
+                let comment = db::dto::Comment {
+                    id: 1,
+                    event_id: 2,
+                    user: String::from("fmc"),
+                    text: String::from("I think that..."),
+                };
+                db::comments::add_comment(comment);
                 response_with_code(StatusCode::OK)
             },
+            (&Method::GET, path) if path.starts_with(COMMENTS_PATH) => {
+                let comment_id = path.trim_end_matches(char::is_numeric)
+                    .parse::<OriginId>()
+                    .ok()
+                    .map(|x| x as usize);
+
+                println!("--> GET comment_id: {:?}", comment_id);
+                response_with_code(StatusCode::METHOD_NOT_ALLOWED)
+            },                
             _ => {
                 println!("--> Nope.");
                 response_with_code(StatusCode::METHOD_NOT_ALLOWED)
