@@ -53,8 +53,7 @@ pub struct Comment {
     pub timestamp: i64,
 }
 
-/*
-#[derive(Insertable, Debug)]
+/*#[derive(Insertable, Debug)]
 #[table_name = "comments"]
 pub struct NewComment {
     pub event_id: i64,

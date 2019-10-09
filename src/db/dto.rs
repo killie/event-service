@@ -42,3 +42,10 @@ pub struct Comment {
     pub user: String,
     pub text: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewComment {
+    pub event_id: i64,
+    pub user: String,
+    pub text: String,
+}
