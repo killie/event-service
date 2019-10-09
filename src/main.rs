@@ -4,7 +4,6 @@ extern crate futures;
 #[macro_use]
 extern crate diesel;
 //extern crate pretty_env_logger;
-extern crate url;
 
 //use std::collections::HashMap;
 //use std::io;
