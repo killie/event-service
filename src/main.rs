@@ -5,14 +5,12 @@ extern crate futures;
 extern crate diesel;
 //extern crate pretty_env_logger;
 
-//use std::collections::HashMap;
-//use std::io;
 use hyper::{service::service_fn, Body, Error, Request, Response, Method, StatusCode, Chunk};
 use futures::{future, Future, future::FutureResult, Stream};
-use serde_json::Result;
+use serde_json::{Result, Value};
 
 mod db;
-
+mod envelope;
 
 type EventId = i64;
 
@@ -21,17 +19,8 @@ type ResponseFuture = Box<Future<Item=Response<Body>, Error=Error> + Send>;
 fn router(request: Request<Body>) -> ResponseFuture {
     match (request.method(), request.uri().path()) {
         (&Method::POST, "/comments") => add_comment_handler(request),
-        _ => four_oh_four(),
+        _ => error_response(StatusCode::NOT_FOUND),
     }
-}
-
-fn four_oh_four() -> ResponseFuture {
-    Box::new(future::ok(
-        Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from("Not found"))
-            .unwrap(),
-    ))
 }
 
 fn add_comment_handler(request: Request<Body>) -> ResponseFuture {
@@ -44,23 +33,49 @@ fn add_comment_handler(request: Request<Body>) -> ResponseFuture {
                 let parse_result: Result<db::dto::NewComment> = serde_json::from_str(&str_body);
                 match parse_result {
                     Ok(comment) => {
-                        println!("comment: {:?}", comment);
-                        redirect_home(&comment.text)
+                        db::comments::add_comment(comment);
+                        let data = r#"{"id": 5}"#;
+                        match serde_json::from_str(&data) {
+                            Ok(json_value) => success_result(json_value),
+                            Err(_) => panic!("Could not parse success result."),
+                        }
                     },
                     Err(_) => {
                         println!("Invalid comment: {}", str_body);
-                        redirect_home(&"Error".to_string())
+                        error_response(StatusCode::BAD_REQUEST)
                     },
                 }
             }),
     )
 }
 
-fn redirect_home(text: &String) -> ResponseFuture {
+fn success_result(value: Value) -> ResponseFuture {
+    send_result(&envelope::success(value))
+}
+
+fn error_result(code: i32, description: String) -> ResponseFuture {
+    send_result(&envelope::error(code, description))
+}
+
+fn send_result(envelope: &envelope::Envelope) -> ResponseFuture {
+    match serde_json::to_string(&envelope) {
+        Ok(json_str) => {
+            Box::new(future::ok(
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .body(Body::from(json_str))
+                    .unwrap()
+            ))
+        },
+        Err(_) => panic!("Cannot serialize error message."),
+    }
+}
+
+fn error_response(status_code: StatusCode) -> ResponseFuture {
     Box::new(future::ok(
         Response::builder()
-            .status(StatusCode::OK)
-            .body(Body::from(text.clone()))
+            .status(status_code)
+            .body(Body::empty())
             .unwrap()
     ))
 }
