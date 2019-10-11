@@ -2,7 +2,6 @@ use dotenv::dotenv;
 use std::env;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use futures::future::FutureResult;
 
 //#[path = "dto.rs"]
 pub mod dto;
@@ -25,33 +24,4 @@ pub fn connect_to_db() -> Option<PgConnection> {
             None
         }
     }
-}
-
-pub fn insert_comment(
-    comment: dto::Comment,
-    db_connection: &PgConnection,
-    //) -> FutureResult<i64, hyper::Error> {
-    ) {
-    /*
-    use schema::comments;
-    
-    let new_comment = models::NewComment {
-        event_id: comment.event_id,
-        username: comment.user,
-        message: comment.text,
-    };
-
-    let id = diesel::insert_into(comments::table)
-        .values(&new_comment)
-        .returning(comments::id)
-        .get_result(db_connection);
-
-    match id {
-        Ok(id) => futures::future::ok(id),
-        Err(error) => {
-            println!("Error writing to database: {}", error.description());
-        }
-    }
-     */
-
 }

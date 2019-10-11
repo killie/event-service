@@ -1,20 +1,18 @@
-
 extern crate hyper;
 extern crate futures;
 #[macro_use]
 extern crate diesel;
 //extern crate pretty_env_logger;
 
-use hyper::{service::service_fn, Body, Error, Request, Response, Method, StatusCode, Chunk};
-use futures::{future, Future, future::FutureResult, Stream};
+use hyper::{service::service_fn, Body, Error, Request, Response, Method, StatusCode};
+use futures::{future, Future, Stream};
 use serde_json::{Result, Value};
 
 mod db;
 mod envelope;
+mod schema;
 
-type EventId = i64;
-
-type ResponseFuture = Box<Future<Item=Response<Body>, Error=Error> + Send>;
+type ResponseFuture = Box<dyn Future<Item=Response<Body>, Error=Error> + Send>;
 
 fn router(request: Request<Body>) -> ResponseFuture {
     match (request.method(), request.uri().path()) {
@@ -29,15 +27,23 @@ fn add_comment_handler(request: Request<Body>) -> ResponseFuture {
             .into_body()
             .concat2()
             .and_then(|whole_body| {
+                // Read entire body from request as string
                 let str_body = String::from_utf8(whole_body.to_vec()).unwrap();
+                // Deserialized JSON string to NewComment
                 let parse_result: Result<db::dto::NewComment> = serde_json::from_str(&str_body);
                 match parse_result {
                     Ok(comment) => {
-                        db::comments::add_comment(comment);
-                        let data = r#"{"id": 5}"#;
-                        match serde_json::from_str(&data) {
-                            Ok(json_value) => success_result(json_value),
-                            Err(_) => panic!("Could not parse success result."),
+                        // Connecting to database
+                        match db::connect_to_db() {
+                            Some(connection) => {
+                                let comment_id = db::comments::add_comment(comment, &connection);
+                                println!("comment_id: {}", comment_id);
+                                id_response(comment_id)
+                            },
+                            None => {
+                                println!("Could not connect to database.");
+                                error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                            },
                         }
                     },
                     Err(_) => {
@@ -47,6 +53,16 @@ fn add_comment_handler(request: Request<Body>) -> ResponseFuture {
                 }
             }),
     )
+}
+
+fn id_response(id: i32) -> ResponseFuture {
+    let mut s = String::from(r#"{"id": "#);
+    s.push_str(&format!("{}", id));
+    s.push_str("}");
+    match serde_json::from_str(&s) {
+        Ok(json_value) => success_result(json_value),
+        Err(_) => panic!("Could not parse id response."),
+    }
 }
 
 fn success_result(value: Value) -> ResponseFuture {

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Event {
-    pub id: i64,
+    pub id: i32,
     pub from: i64,
     pub to: i64, // If it is an instant then from and to is the same
     pub origin: String,
@@ -16,20 +16,20 @@ pub struct Event {
 
 #[derive(Serialize, Deserialize)]
 pub struct Origin {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Source {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
-    pub origin_id: u32,
+    pub origin_id: i32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EventType {
-    pub id: u32,
+    pub id: i32,
     pub name: String,
     // TODO: Add event group?
     pub description: String,
@@ -37,15 +37,17 @@ pub struct EventType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Comment {
-    pub id: i64,
-    pub event_id: i64,
+    pub id: i32,
+    pub event_id: i32,
     pub user: String,
     pub text: String,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewComment {
-    pub event_id: i64,
+    pub event_id: i32,
     pub user: String,
     pub text: String,
+    pub timestamp: i64,
 }
