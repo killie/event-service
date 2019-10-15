@@ -59,10 +59,8 @@ fn id_response(id: i32) -> ResponseFuture {
     let mut s = String::from(r#"{"id": "#);
     s.push_str(&format!("{}", id));
     s.push_str("}");
-    match serde_json::from_str(&s) {
-        Ok(json_value) => success_result(json_value),
-        Err(_) => panic!("Could not parse id response."),
-    }
+    let json_value = serde_json::from_str(&s).unwrap();
+    success_result(json_value)
 }
 
 fn success_result(value: Value) -> ResponseFuture {
@@ -74,17 +72,13 @@ fn error_result(code: i32, description: String) -> ResponseFuture {
 }
 
 fn send_result(envelope: &envelope::Envelope) -> ResponseFuture {
-    match serde_json::to_string(&envelope) {
-        Ok(json_str) => {
-            Box::new(future::ok(
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .body(Body::from(json_str))
-                    .unwrap()
-            ))
-        },
-        Err(_) => panic!("Cannot serialize error message."),
-    }
+    let json_str = serde_json::to_string(&envelope).unwrap();
+    Box::new(future::ok(
+        Response::builder()
+            .status(StatusCode::OK)
+            .body(Body::from(json_str))
+            .unwrap()
+    ))
 }
 
 fn error_response(status_code: StatusCode) -> ResponseFuture {
