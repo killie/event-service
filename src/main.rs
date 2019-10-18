@@ -16,9 +16,85 @@ type ResponseFuture = Box<dyn Future<Item=Response<Body>, Error=Error> + Send>;
 
 fn router(request: Request<Body>) -> ResponseFuture {
     match (request.method(), request.uri().path()) {
+        (&Method::POST, "/events") => extract_body(request, add_event),
         (&Method::POST, "/comments") => extract_body(request, add_comment),
-        (&Method::GET, path) if path.starts_with("/comments/") => get_comments_by_event_id(path),
+        (&Method::GET, path) => {
+            if path.starts_with("/comments/") {
+                get_comments_by_event_id(path)
+            } else if path.starts_with("/events/") {
+                get_events(path) // TODO: Will get pagination and filter on origin and date
+            } else {
+                error_response(StatusCode::NOT_FOUND)
+            }
+        },
         _ => error_response(StatusCode::NOT_FOUND),
+    }
+}
+
+fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
+    // Anti-DRY ahead!
+
+    // Read entire body from request as string
+    let str_body = String::from_utf8(chunk.to_vec()).unwrap();
+    // Deserialize JSON string to NewEvent
+    let parse_result: Result<db::dto::NewEvent> = serde_json::from_str(&str_body);
+    match parse_result {
+        Ok(event) => {
+            // Connecting to database
+            match db::connect_to_db() {
+                Some(connection) => {
+                    // Saving to events table
+                    match db::events::create_event(event, &connection) {
+                        Ok(id) => {
+                            println!("id: {}", id);
+                            id_response(id)
+                        },
+                        Err(error) => {
+                            println!("Could not add record to database: {}", error);
+                            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    }
+                },
+                None => {
+                    println!("Could not connect to database.");
+                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+            }
+        },
+        Err(_) => {
+            println!("Invalid body: {}", str_body);
+            error_response(StatusCode::BAD_REQUEST)
+        },
+    }
+}
+
+fn get_events(path: &str) -> ResponseFuture {
+    // Connecting to database
+    match db::connect_to_db() {
+        Some(connection) => {
+            // TODO: Extract valid fields from path
+            let filter = db::events::EventFilter {
+                origin: Some(String::from("O")),
+                event_type: None,
+                after: None,
+                before: None,
+            };
+            match db::events::get_events(filter, &connection) {
+                Ok(events) => {
+                    let events = serde_json::to_string(&events).unwrap();
+                    let envelope = envelope::success_from_str(events);
+                    send_result(&envelope)
+                },
+                Err(error) => {
+                    println!("Error loading comments");
+                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+            }
+        },
+        None => {
+            println!("Could not connect to database.");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
@@ -34,12 +110,12 @@ fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
                 Some(connection) => {
                     // Saving to comments table
                     match db::comments::add_comment(comment, &connection) {
-                        Ok(comment_id) => {
-                            println!("comment_id: {}", comment_id);
-                            id_response(comment_id)
+                        Ok(id) => {
+                            println!("id: {}", id);
+                            id_response(id)
                         },
                         Err(error) => {
-                            println!("Could not add comment to database: {}", error);
+                            println!("Could not add record to database: {}", error);
                             error_response(StatusCode::INTERNAL_SERVER_ERROR)
                         }}
                 },
@@ -50,7 +126,7 @@ fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
             }
         },
         Err(_) => {
-            println!("Invalid comment: {}", str_body);
+            println!("Invalid body: {}", str_body);
             error_response(StatusCode::BAD_REQUEST)
         },
     }

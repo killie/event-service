@@ -9,10 +9,19 @@ pub struct Event {
     pub to: i64, // If it is an instant then from and to is the same
     pub origin: String,
     // Vector of source names
-    pub event: String,
+    pub eventType: String,
     pub message: String,
     // Vector of comment records?
 } // TODO: Related events, comments
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewEvent {
+    pub from: i64,
+    pub to: i64,
+    pub origin: String,
+    pub eventType: String,
+    pub message: String,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Origin {

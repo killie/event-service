@@ -1,6 +1,7 @@
 use serde::{Serialize};
 use diesel::{Queryable, Insertable};
 
+use crate::schema::events;
 use crate::schema::comments;
 
 #[derive(Queryable, Serialize, Debug)]
@@ -8,6 +9,16 @@ pub struct Event {
     pub id: i32,
     pub from: i64,
     pub to: i64, // If it is an instant then from and to is the same
+    pub origin_id: i32,
+    pub event_type: i32,
+    pub message: String,        
+}
+
+#[derive(Insertable, Debug)]
+#[table_name = "events"]
+pub struct NewEvent {
+    pub from: i64,
+    pub to: i64,
     pub origin_id: i32,
     pub event_type: i32,
     pub message: String,        
