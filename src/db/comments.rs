@@ -1,7 +1,6 @@
 use diesel::pg::{PgConnection};
-use diesel::{deserialize::FromSql};
-use diesel::result::{Error as DieselError, QueryResult};
-use crate::diesel::RunQueryDsl;
+use diesel::result::{Error as DieselError};
+use crate::diesel::{RunQueryDsl, QueryDsl, ExpressionMethods};
 
 pub use super::dto; // TODO: Remove from db mod into root
 use super::models;
@@ -10,12 +9,31 @@ use crate::schema::comments;
 type EventId = i32;
 type CommentId = i32;
 
-pub fn get_comments(id: EventId) {
-    //let result: i32 = comments::table.load::<models::Comment>(&connection).get_result(connection);
-    println!("Loading comments for event {}", id);
+pub fn get_comments(event_id: EventId, connection: &PgConnection) -> Result<Vec<dto::Comment>, DieselError> {
+    let results = comments::table
+        .filter(comments::event_id.eq(&event_id))
+        .load::<models::Comment>(connection);
+
+    match results {
+        Ok(data) => {
+            let comments = data.iter()
+                .map(|c| {
+                    dto::Comment {
+                        id: c.id,
+                        event_id: c.event_id,
+                        user: c.username.clone(),
+                        text: c.message.clone(),
+                        timestamp: c.timestamp,
+                    }
+                })
+                .collect();
+            return Ok(comments);
+        },
+        Err(error) => Err(error),
+    }
 }
 
-pub fn add_comment(comment: dto::NewComment, connection: &PgConnection) -> CommentId {
+pub fn add_comment(comment: dto::NewComment, connection: &PgConnection) -> Result<CommentId, DieselError> {
     let new_comment = models::NewComment {
         event_id: comment.event_id,
         username: comment.user,
@@ -27,7 +45,6 @@ pub fn add_comment(comment: dto::NewComment, connection: &PgConnection) -> Comme
         .values(&new_comment)
         .returning(comments::id)
         .get_result(connection)
-        .expect("Error saving new comment.")
 }
 
 pub fn delete_comment(id: CommentId) {

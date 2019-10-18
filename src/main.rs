@@ -16,42 +16,89 @@ type ResponseFuture = Box<dyn Future<Item=Response<Body>, Error=Error> + Send>;
 
 fn router(request: Request<Body>) -> ResponseFuture {
     match (request.method(), request.uri().path()) {
-        (&Method::POST, "/comments") => add_comment_handler(request),
+        (&Method::POST, "/comments") => extract_body(request, add_comment),
+        (&Method::GET, path) if path.starts_with("/comments/") => get_comments_by_event_id(path),
         _ => error_response(StatusCode::NOT_FOUND),
     }
 }
 
-fn add_comment_handler(request: Request<Body>) -> ResponseFuture {
+fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
+    // Read entire body from request as string
+    let str_body = String::from_utf8(chunk.to_vec()).unwrap();
+    // Deserialize JSON string to NewComment
+    let parse_result: Result<db::dto::NewComment> = serde_json::from_str(&str_body);
+    match parse_result {
+        Ok(comment) => {
+            // Connecting to database
+            match db::connect_to_db() {
+                Some(connection) => {
+                    // Saving to comments table
+                    match db::comments::add_comment(comment, &connection) {
+                        Ok(comment_id) => {
+                            println!("comment_id: {}", comment_id);
+                            id_response(comment_id)
+                        },
+                        Err(error) => {
+                            println!("Could not add comment to database: {}", error);
+                            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                        }}
+                },
+                None => {
+                    println!("Could not connect to database.");
+                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+            }
+        },
+        Err(_) => {
+            println!("Invalid comment: {}", str_body);
+            error_response(StatusCode::BAD_REQUEST)
+        },
+    }
+}
+
+fn get_comments_by_event_id(path: &str) -> ResponseFuture {
+    // Get event_id from request path
+    let parse_result = path.trim_start_matches("/comments/")
+        .parse::<i32>()
+        .ok()
+        .map(|x| x as i32);
+
+    match parse_result {
+        Some(event_id) => {
+            // Connecting to database
+            match db::connect_to_db() {
+                Some(connection) => {
+                    // Loading comments on said event_id
+                    match db::comments::get_comments(event_id, &connection) {
+                        Ok(comments) => {
+                            let comments = serde_json::to_string(&comments).unwrap();
+                            let envelope = envelope::success_from_str(comments);
+                            send_result(&envelope)
+                        },
+                        Err(error) => {
+                            println!("Error loading comments");
+                            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                        },
+                    }
+                },
+                None => {
+                    println!("Could not connect to database.");
+                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+            }
+        },
+        None => {
+            error_response(StatusCode::BAD_REQUEST)
+        },
+    }
+}
+
+fn extract_body(request: Request<Body>, body_handler: fn(chunk: hyper::Chunk) -> ResponseFuture) -> ResponseFuture {
     Box::new(
         request
             .into_body()
             .concat2()
-            .and_then(|whole_body| {
-                // Read entire body from request as string
-                let str_body = String::from_utf8(whole_body.to_vec()).unwrap();
-                // Deserialized JSON string to NewComment
-                let parse_result: Result<db::dto::NewComment> = serde_json::from_str(&str_body);
-                match parse_result {
-                    Ok(comment) => {
-                        // Connecting to database
-                        match db::connect_to_db() {
-                            Some(connection) => {
-                                let comment_id = db::comments::add_comment(comment, &connection);
-                                println!("comment_id: {}", comment_id);
-                                id_response(comment_id)
-                            },
-                            None => {
-                                println!("Could not connect to database.");
-                                error_response(StatusCode::INTERNAL_SERVER_ERROR)
-                            },
-                        }
-                    },
-                    Err(_) => {
-                        println!("Invalid comment: {}", str_body);
-                        error_response(StatusCode::BAD_REQUEST)
-                    },
-                }
-            }),
+            .and_then(body_handler)
     )
 }
 
@@ -75,6 +122,7 @@ fn send_result(envelope: &envelope::Envelope) -> ResponseFuture {
     let json_str = serde_json::to_string(&envelope).unwrap();
     Box::new(future::ok(
         Response::builder()
+            .header("Content-Type", "application/json")
             .status(StatusCode::OK)
             .body(Body::from(json_str))
             .unwrap()

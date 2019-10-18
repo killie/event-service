@@ -45,3 +45,9 @@ pub fn success(value: Value) -> Envelope {
         total_pages: None
     }
 }
+
+pub fn success_from_str(s: String) -> Envelope {
+    let value: Value = serde_json::from_str(&s).unwrap();
+    success(value)
+}
+
