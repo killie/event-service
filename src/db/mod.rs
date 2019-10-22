@@ -1,27 +1,15 @@
 use dotenv::dotenv;
 use std::env;
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-
-//#[path = "dto.rs"]
-pub mod dto;
-//#[path = "models.rs"]
-mod models;
+use postgres::{Connection, TlsMode, Error};
 
 pub mod events;
 pub mod comments;
 
 const DEFAULT_DB_URL: &'static str = "postgres://postgres@localhost:5432";
 
-pub fn connect_to_db() -> Option<PgConnection> {
-    dotenv().ok();
-    
+pub fn connect_to_db() -> Result<Connection, Error> {
+    dotenv().ok(); // TODO: What is this then
     let db_url = env::var("DATABASE_URL").unwrap_or(String::from(DEFAULT_DB_URL));
-    match PgConnection::establish(&db_url) {
-        Ok(connection) => Some(connection),
-        Err(error) => {
-            println!("Could not connect to database: {:?}", error);
-            None
-        }
-    }
+    let result = Connection::connect(db_url, TlsMode::None);
+    result
 }

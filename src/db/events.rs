@@ -1,17 +1,12 @@
-use diesel::pg::{PgConnection};
-use diesel::result::{Error as DieselError};
-use crate::diesel::{RunQueryDsl, QueryDsl, ExpressionMethods};
-
-pub use super::dto; // TODO: Remove from db mod into root
-use super::models;
-use crate::schema::events;
+use postgres::{Connection, error::Error};
+use crate::dto;
 
 type EventId = i32;
 
-pub fn create_event(event: dto::NewEvent, connection: &PgConnection) -> Result<EventId, DieselError> {
+pub fn create_event(e: dto::NewEvent, conn: &Connection) -> Result<EventId, Error> {
     // NewEvent has origin and eventType as strings. These must be added to separate tables,
     // and corresponding id must be used as origin_id and event_type in events table.
-    
+    /*
     let new_event = models::NewEvent {
         from: event.from,
         to: event.to,
@@ -24,6 +19,13 @@ pub fn create_event(event: dto::NewEvent, connection: &PgConnection) -> Result<E
         .values(&new_event)
         .returning(events::id)
         .get_result(connection)
+     */
+
+    conn.execute("INSERT INTO events (from, to, origin_id, event_type, message)
+                  VALUES ($1, $2, $3, $4, $5)",
+                 &[&e.from, &e.to, &1, &1, &e.message]);
+    // Returning id
+    Ok(0)
 }
 
 #[derive(Debug)]
@@ -34,11 +36,11 @@ pub struct EventFilter {
     pub before: Option<i64>,
 }
 
-pub fn get_events(filter: EventFilter, connection: &PgConnection) -> Result<Vec<dto::Event>, DieselError> {
+pub fn get_events(filter: EventFilter, conn: &Connection) -> Result<Vec<dto::Event>, Error> {
     println!("TODO: Filter events on {:?}", filter);
     Ok(vec![])
 }
 
-pub fn add_source(event_id: EventId, source: String) {
-    println!("Adding source {} to event {}", source, event_id);
+pub fn add_source(event_id: EventId, source: String, origin: String) {
+    println!("Adding source {} ({}) to event {}", source, origin, event_id); // Again, strings, do we need separate tables?
 }

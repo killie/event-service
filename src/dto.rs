@@ -1,4 +1,4 @@
-// This is data transfer objects. They do not correspond to database model.
+// These are data transfer objects. They do not correspond to database model.
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ pub struct Event {
     pub from: i64,
     pub to: i64, // If it is an instant then from and to is the same
     pub origin: String,
-    // Vector of source names
+    pub sources: Vec<String>,
     pub eventType: String,
     pub message: String,
     // Vector of comment records?
@@ -19,6 +19,7 @@ pub struct NewEvent {
     pub from: i64,
     pub to: i64,
     pub origin: String,
+    pub sources: Vec<String>,
     pub eventType: String,
     pub message: String,
 }

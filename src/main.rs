@@ -1,7 +1,5 @@
 extern crate hyper;
 extern crate futures;
-#[macro_use]
-extern crate diesel;
 //extern crate pretty_env_logger;
 
 use hyper::{service::service_fn, Body, Error, Request, Response, Method, StatusCode};
@@ -9,9 +7,9 @@ use futures::{future, Future, Stream};
 use serde_json::{Result, Value};
 
 mod db;
+mod dto;
 mod envelope;
-mod schema;
-
+    
 type ResponseFuture = Box<dyn Future<Item=Response<Body>, Error=Error> + Send>;
 
 fn router(request: Request<Body>) -> ResponseFuture {
@@ -37,12 +35,12 @@ fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
     // Read entire body from request as string
     let str_body = String::from_utf8(chunk.to_vec()).unwrap();
     // Deserialize JSON string to NewEvent
-    let parse_result: Result<db::dto::NewEvent> = serde_json::from_str(&str_body);
+    let parse_result: Result<dto::NewEvent> = serde_json::from_str(&str_body);
     match parse_result {
         Ok(event) => {
             // Connecting to database
             match db::connect_to_db() {
-                Some(connection) => {
+                Ok(connection) => {
                     // Saving to events table
                     match db::events::create_event(event, &connection) {
                         Ok(id) => {
@@ -55,7 +53,7 @@ fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
                         }
                     }
                 },
-                None => {
+                Err(_) => {
                     println!("Could not connect to database.");
                     error_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
@@ -71,7 +69,7 @@ fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
 fn get_events(path: &str) -> ResponseFuture {
     // Connecting to database
     match db::connect_to_db() {
-        Some(connection) => {
+        Ok(connection) => {
             // TODO: Extract valid fields from path
             let filter = db::events::EventFilter {
                 origin: Some(String::from("O")),
@@ -91,7 +89,7 @@ fn get_events(path: &str) -> ResponseFuture {
                 },
             }
         },
-        None => {
+        Err(_) => {
             println!("Could not connect to database.");
             error_response(StatusCode::INTERNAL_SERVER_ERROR)
         },
@@ -102,12 +100,12 @@ fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
     // Read entire body from request as string
     let str_body = String::from_utf8(chunk.to_vec()).unwrap();
     // Deserialize JSON string to NewComment
-    let parse_result: Result<db::dto::NewComment> = serde_json::from_str(&str_body);
+    let parse_result: Result<dto::NewComment> = serde_json::from_str(&str_body);
     match parse_result {
         Ok(comment) => {
             // Connecting to database
             match db::connect_to_db() {
-                Some(connection) => {
+                Ok(connection) => {
                     // Saving to comments table
                     match db::comments::add_comment(comment, &connection) {
                         Ok(id) => {
@@ -119,7 +117,7 @@ fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
                             error_response(StatusCode::INTERNAL_SERVER_ERROR)
                         }}
                 },
-                None => {
+                Err(_) => {
                     println!("Could not connect to database.");
                     error_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
@@ -143,7 +141,7 @@ fn get_comments_by_event_id(path: &str) -> ResponseFuture {
         Some(event_id) => {
             // Connecting to database
             match db::connect_to_db() {
-                Some(connection) => {
+                Ok(connection) => {
                     // Loading comments on said event_id
                     match db::comments::get_comments(event_id, &connection) {
                         Ok(comments) => {
@@ -157,7 +155,7 @@ fn get_comments_by_event_id(path: &str) -> ResponseFuture {
                         },
                     }
                 },
-                None => {
+                Err(_) => {
                     println!("Could not connect to database.");
                     error_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },

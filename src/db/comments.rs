@@ -1,15 +1,11 @@
-use diesel::pg::{PgConnection};
-use diesel::result::{Error as DieselError};
-use crate::diesel::{RunQueryDsl, QueryDsl, ExpressionMethods};
-
-pub use super::dto; // TODO: Remove from db mod into root
-use super::models;
-use crate::schema::comments;
+use postgres::{Connection, error::Error};
+use crate::dto;
 
 type EventId = i32;
 type CommentId = i32;
 
-pub fn get_comments(event_id: EventId, connection: &PgConnection) -> Result<Vec<dto::Comment>, DieselError> {
+pub fn get_comments(event_id: EventId, connection: &Connection) -> Result<Vec<dto::Comment>, Error> {
+    /*
     let results = comments::table
         .filter(comments::event_id.eq(&event_id))
         .load::<models::Comment>(connection);
@@ -31,9 +27,13 @@ pub fn get_comments(event_id: EventId, connection: &PgConnection) -> Result<Vec<
         },
         Err(error) => Err(error),
     }
+     */
+    let comments: Vec<dto::Comment> = Vec::new();
+    Ok(comments)
 }
 
-pub fn add_comment(comment: dto::NewComment, connection: &PgConnection) -> Result<CommentId, DieselError> {
+pub fn add_comment(comment: dto::NewComment, connection: &Connection) -> Result<CommentId, Error> {
+    /*
     let new_comment = models::NewComment {
         event_id: comment.event_id,
         username: comment.user,
@@ -45,6 +45,8 @@ pub fn add_comment(comment: dto::NewComment, connection: &PgConnection) -> Resul
         .values(&new_comment)
         .returning(comments::id)
         .get_result(connection)
+     */
+    Ok(0)
 }
 
 pub fn delete_comment(id: CommentId) {
