@@ -1,7 +1,6 @@
 use postgres::{Connection, error::Error};
-use std::convert::TryFrom;
 
-use crate::dto;
+use crate::rest::dto;
 
 type EventId = i32;
 type CommentId = i32;
@@ -61,11 +60,11 @@ pub fn add_comment(c: dto::NewComment, conn: &Connection) -> Result<CommentId, E
     }
 }
 
-pub fn delete_comment(id: CommentId) {
-    println!("Deleting comment {}", id);
+pub fn delete_comment(id: CommentId, conn: &Connection) -> Result<u64, Error> {
+    conn.execute("DELETE FROM comments WHERE id = $1;", &[&id])
 }
 
-pub fn edit_comment(id: CommentId, text: String) {
-    println!("Editing comment {} = {}", id, text);
+pub fn edit_comment(id: CommentId, text: String, conn: &Connection) -> Result<u64, Error> {
+    conn.execute("UPDATE comments SET message = $1 WHERE id = $2", &[&text, &id])
 }
 

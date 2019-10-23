@@ -1,5 +1,5 @@
 use postgres::{Connection, error::Error};
-use crate::dto;
+use crate::rest::dto;
 
 type EventId = i32;
 
