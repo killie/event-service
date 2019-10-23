@@ -21,11 +21,14 @@ pub fn create_event(e: dto::NewEvent, conn: &Connection) -> Result<EventId, Erro
         .get_result(connection)
      */
 
+    /*
     conn.execute("INSERT INTO events (from, to, origin_id, event_type, message)
-                  VALUES ($1, $2, $3, $4, $5)",
-                 &[&e.from, &e.to, &1, &1, &e.message]);
-    // Returning id
-    Ok(0)
+                  VALUES ($1, $2, $3, $4, $5)
+                  RETURNING id",
+                 &[&e.from, &e.to, &1, &1, &e.message])
+     */
+    Ok(1)
+
 }
 
 #[derive(Debug)]
