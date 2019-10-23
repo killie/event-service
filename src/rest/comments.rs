@@ -13,10 +13,8 @@ pub fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
     let parse_result: Result<dto::NewComment> = serde_json::from_str(&str_body);
     match parse_result {
         Ok(comment) => {
-            // Connecting to database
             match db::connect_to_db() {
                 Ok(connection) => {
-                    // Saving to comments table
                     match db::comments::add_comment(comment, &connection) {
                         Ok(id) => {
                             println!("id: {}", id);
@@ -24,18 +22,18 @@ pub fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
                         },
                         Err(error) => {
                             println!("Could not add record to database: {}", error);
-                            super::error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                         }}
                 },
                 Err(_) => {
                     println!("Could not connect to database.");
-                    super::error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
         Err(_) => {
             println!("Invalid body: {}", str_body);
-            super::error_response(StatusCode::BAD_REQUEST)
+            super::empty_response(StatusCode::BAD_REQUEST)
         },
     }
 }
@@ -43,10 +41,8 @@ pub fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
 pub fn get_comments_by_event_id(path: &str) -> ResponseFuture {
     match super::get_id_from_path(&path, "/comments/") {
         Some(event_id) => {
-            // Connecting to database
             match db::connect_to_db() {
                 Ok(connection) => {
-                    // Loading comments on said event_id
                     match db::comments::get_comments(event_id, &connection) {
                         Ok(comments) => {
                             let comments = serde_json::to_string(&comments).unwrap();
@@ -55,20 +51,49 @@ pub fn get_comments_by_event_id(path: &str) -> ResponseFuture {
                         },
                         Err(error) => {
                             println!("Error loading comments");
-                            super::error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                         },
                     }
                 },
                 Err(_) => {
                     println!("Could not connect to database.");
-                    super::error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
         None => {
-            super::error_response(StatusCode::BAD_REQUEST)
+            super::empty_response(StatusCode::BAD_REQUEST)
         },
     }
 }
 
-
+pub fn delete_comment_by_id(path: &str) -> ResponseFuture {
+    match super::get_id_from_path(&path, "/comments/") {
+        Some(comment_id) => {
+            match db::connect_to_db() {
+                Ok(connection) => {
+                    match db::comments::delete_comment(comment_id, &connection) {
+                        Ok(count) => {
+                            if count == 1 {
+                                super::empty_response(StatusCode::OK)
+                            } else {
+                                super::empty_response(StatusCode::NOT_FOUND)
+                            }
+                        },
+                        Err(error) => {
+                            println!("Error deleting comment id {} ({})", comment_id, error);
+                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
+                        },
+                    }
+                },
+                Err(_) => {
+                    println!("Could not connect to database.");
+                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+            }
+        },
+        None => {
+            super::empty_response(StatusCode::BAD_REQUEST)
+        },
+    }
+}

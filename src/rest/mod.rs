@@ -22,19 +22,17 @@ pub fn router(request: Request<Body>) -> ResponseFuture {
             } else if path.starts_with("/events/") {
                 events::get_events(path) // TODO: Will get pagination and filter on origin and date
             } else {
-                error_response(StatusCode::NOT_FOUND)
+                empty_response(StatusCode::NOT_FOUND)
             }
         },
-        /*
         (&Method::DELETE, path) => {
             if path.starts_with("/comments/") {
-                comments::delete_comment_by_event_id(path)
+                comments::delete_comment_by_id(path)
             } else {
-                error_response(StatusCode::NOT_FOUND)
+                empty_response(StatusCode::NOT_FOUND)
             }
         },
-         */
-        _ => error_response(StatusCode::NOT_FOUND),
+        _ => empty_response(StatusCode::NOT_FOUND),
     }
 }
 
@@ -66,7 +64,7 @@ fn success_result(value: Value) -> ResponseFuture {
     send_result(&envelope::success(value))
 }
 
-fn error_result(code: i32, description: String) -> ResponseFuture {
+fn empty_result(code: i32, description: String) -> ResponseFuture {
     send_result(&envelope::error(code, description))
 }
 
@@ -81,7 +79,7 @@ fn send_result(envelope: &envelope::Envelope) -> ResponseFuture {
     ))
 }
 
-fn error_response(status_code: StatusCode) -> ResponseFuture {
+fn empty_response(status_code: StatusCode) -> ResponseFuture {
     Box::new(future::ok(
         Response::builder()
             .status(status_code)

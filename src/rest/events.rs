@@ -4,7 +4,7 @@ use hyper::StatusCode;
 use serde_json::Result;
 
 use crate::db;
-use crate::rest::{ResponseFuture, id_response, error_response, send_result, dto, envelope};
+use crate::rest::{ResponseFuture, dto, envelope};
 
 pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
     // Anti-DRY ahead!
@@ -22,23 +22,23 @@ pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
                     match db::events::create_event(event, &connection) {
                         Ok(id) => {
                             println!("id: {}", id);
-                            id_response(id)
+                            super::id_response(id)
                         },
                         Err(error) => {
                             println!("Could not add record to database: {}", error);
-                            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                         }
                     }
                 },
                 Err(_) => {
                     println!("Could not connect to database.");
-                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
         Err(_) => {
             println!("Invalid body: {}", str_body);
-            error_response(StatusCode::BAD_REQUEST)
+            super::empty_response(StatusCode::BAD_REQUEST)
         },
     }
 }
@@ -58,17 +58,17 @@ pub fn get_events(path: &str) -> ResponseFuture {
                 Ok(events) => {
                     let events = serde_json::to_string(&events).unwrap();
                     let envelope = envelope::success_from_str(events);
-                    send_result(&envelope)
+                    super::send_result(&envelope)
                 },
                 Err(error) => {
                     println!("Error loading comments");
-                    error_response(StatusCode::INTERNAL_SERVER_ERROR)
+                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
         Err(_) => {
             println!("Could not connect to database.");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR)
+            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
         },
     }
 }
