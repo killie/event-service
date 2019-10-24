@@ -38,62 +38,48 @@ pub fn add_comment(chunk: hyper::Chunk) -> ResponseFuture {
     }
 }
 
-pub fn get_comments_by_event_id(path: &str) -> ResponseFuture {
-    match super::get_id_from_path(&path, "/comments/") {
-        Some(event_id) => {
-            match db::connect_to_db() {
-                Ok(connection) => {
-                    match db::comments::get_comments(event_id, &connection) {
-                        Ok(comments) => {
-                            let comments = serde_json::to_string(&comments).unwrap();
-                            let envelope = envelope::success_from_str(comments);
-                            super::send_result(&envelope)
-                        },
-                        Err(error) => {
-                            println!("Error loading comments");
-                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
-                        },
-                    }
+pub fn get_comments_by_event_id(event_id: i32) -> ResponseFuture {
+    match db::connect_to_db() {
+        Ok(connection) => {
+            match db::comments::get_comments(event_id, &connection) {
+                Ok(comments) => {
+                    let comments = serde_json::to_string(&comments).unwrap();
+                    let envelope = envelope::success_from_str(comments);
+                    super::send_result(&envelope)
                 },
-                Err(_) => {
-                    println!("Could not connect to database.");
+                Err(error) => {
+                    println!("Error loading comments");
                     super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
-        None => {
-            super::empty_response(StatusCode::BAD_REQUEST)
+        Err(_) => {
+            println!("Could not connect to database.");
+            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
         },
     }
 }
 
-pub fn delete_comment_by_id(path: &str) -> ResponseFuture {
-    match super::get_id_from_path(&path, "/comments/") {
-        Some(comment_id) => {
-            match db::connect_to_db() {
-                Ok(connection) => {
-                    match db::comments::delete_comment(comment_id, &connection) {
-                        Ok(count) => {
-                            if count == 1 {
-                                super::empty_response(StatusCode::OK)
-                            } else {
-                                super::empty_response(StatusCode::NOT_FOUND)
-                            }
-                        },
-                        Err(error) => {
-                            println!("Error deleting comment id {} ({})", comment_id, error);
-                            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
-                        },
+pub fn delete_comment_by_id(comment_id: i32) -> ResponseFuture {
+    match db::connect_to_db() {
+        Ok(connection) => {
+            match db::comments::delete_comment(comment_id, &connection) {
+                Ok(count) => {
+                    if count == 1 {
+                        super::empty_response(StatusCode::OK)
+                    } else {
+                        super::empty_response(StatusCode::NOT_FOUND)
                     }
                 },
-                Err(_) => {
-                    println!("Could not connect to database.");
+                Err(error) => {
+                    println!("Error deleting comment id {} ({})", comment_id, error);
                     super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }
         },
-        None => {
-            super::empty_response(StatusCode::BAD_REQUEST)
+        Err(_) => {
+            println!("Could not connect to database.");
+            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
         },
     }
 }

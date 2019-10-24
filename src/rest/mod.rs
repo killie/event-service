@@ -13,32 +13,47 @@ pub mod comments;
 pub type ResponseFuture = Box<dyn Future<Item=Response<Body>, Error=Error> + Send>;
 
 pub fn router(request: Request<Body>) -> ResponseFuture {
-    match (request.method(), request.uri().path()) {
-        (&Method::POST, "/events") => extract_body(request, events::add_event),
-        (&Method::POST, "/comments") => extract_body(request, comments::add_comment),
-        (&Method::GET, path) => {
-            if path.starts_with("/comments/") {
-                comments::get_comments_by_event_id(path)
-            } else if path.starts_with("/events/") {
-                events::get_events(path) // TODO: Will get pagination and filter on origin and date
-            } else {
-                empty_response(StatusCode::NOT_FOUND)
-            }
-        },
-        (&Method::DELETE, path) => {
-            if path.starts_with("/comments/") {
-                comments::delete_comment_by_id(path)
-            } else {
-                empty_response(StatusCode::NOT_FOUND)
-            }
-        },
-        _ => empty_response(StatusCode::NOT_FOUND),
+    let method = request.method();
+    let path = request.uri().path();
+
+    if let Some(_) = match_paths(path, "/events") {
+        match method {
+            &Method::GET => events::get_events(path),
+            &Method::POST => extract_body(request, events::add_event),
+            _ => empty_response(StatusCode::NOT_FOUND),
+        }
+
+    } else if let Some(ids) = match_paths(path, "/events/*") {
+        match method {
+            &Method::PUT => error_result(1, "Not implemented"),
+            &Method::DELETE => error_result(1, "Not implemented"),
+            _ => empty_response(StatusCode::NOT_FOUND),
+        }
+
+    } else if let Some(ids) = match_paths(path, "/events/*/comments") {
+        let event_id = *ids.get(0).unwrap();
+        match method {
+            &Method::GET => comments::get_comments_by_event_id(event_id),
+            &Method::POST => extract_body(request, comments::add_comment), // Duplicating event_id in path and body...
+            _ => empty_response(StatusCode::NOT_FOUND),
+        }
+
+    } else if let Some(ids) = match_paths(path, "/events/*/comments/*") {
+        let comment_id = *ids.get(1).unwrap();
+        match method {
+            &Method::PUT => error_result(1, "Not implemented"),
+            &Method::DELETE => comments::delete_comment_by_id(comment_id),
+            _ => empty_response(StatusCode::NOT_FOUND),
+        }
+
+    } else {
+        empty_response(StatusCode::NOT_FOUND)
     }
 }
 
 // Splits a_str and b_str on / and compares parts. When b_str contains * the corresponding substring
-// in a_str must contain an integer. If a_str and b_str have equal number of substrings method returns
-// Some(ids: Vec<i32>). Otherwise it returns None to signal that there is no match.
+// in a_str must contain an integer. If a_str and b_str have equal number of substrings, method returns
+// Some(Vec<i32>). Otherwise it returns None to signal that there is no match.
 fn match_paths(a_str: &str, b_str: &str) -> Option<Vec<i32>> {
     let a_parts: Vec<&str> = a_str.split('/').collect();
     let b_parts: Vec<&str> = b_str.split('/').collect();
@@ -78,13 +93,6 @@ fn extract_body(request: Request<Body>, body_handler: fn(chunk: hyper::Chunk) ->
     )
 }
 
-fn get_id_from_path(path: &str, sub_path: &str) -> Option<i32> {
-    path.trim_start_matches(sub_path)
-        .parse::<i32>()
-        .ok()
-        .map(|x| x as i32)
-}
-
 fn id_response(id: i32) -> ResponseFuture {
     let mut s = String::from(r#"{"id": "#);
     s.push_str(&format!("{}", id));
@@ -97,8 +105,8 @@ fn success_result(value: Value) -> ResponseFuture {
     send_result(&envelope::success(value))
 }
 
-fn empty_result(code: i32, description: String) -> ResponseFuture {
-    send_result(&envelope::error(code, description))
+fn error_result(code: i32, description: &str) -> ResponseFuture {
+    send_result(&envelope::error(code, description.to_string()))
 }
 
 fn send_result(envelope: &envelope::Envelope) -> ResponseFuture {
