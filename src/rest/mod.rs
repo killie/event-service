@@ -36,6 +36,39 @@ pub fn router(request: Request<Body>) -> ResponseFuture {
     }
 }
 
+// Splits a_str and b_str on / and compares parts. When b_str contains * the corresponding substring
+// in a_str must contain an integer. If a_str and b_str have equal number of substrings method returns
+// Some(ids: Vec<i32>). Otherwise it returns None to signal that there is no match.
+fn match_paths(a_str: &str, b_str: &str) -> Option<Vec<i32>> {
+    let a_parts: Vec<&str> = a_str.split('/').collect();
+    let b_parts: Vec<&str> = b_str.split('/').collect();
+    if a_parts.len() != b_parts.len() {
+        return None;
+    }
+    let mut ids: Vec<i32> = vec![];
+    for i in 0..a_parts.len() as usize {
+        let a = a_parts.get(i).unwrap();
+        let b = b_parts.get(i).unwrap();
+        if b == &"*" {
+            match a.parse::<i32>() {
+                Ok(id) => ids.push(id),
+                Err(_) => return None,
+            }
+        } else if a != b {
+            return None;
+        }
+    }
+    Some(ids)
+}
+
+#[test]
+fn match_paths_test() {
+    assert_eq!(match_paths("/events", "/events"), Some(vec![]));
+    assert_eq!(match_paths("/events/1", "/events/*"), Some(vec![1]));
+    assert_eq!(match_paths("/events/214/comments", "/events/*/comments"), Some(vec![214]));
+    assert_eq!(match_paths("/events/60/comments/23", "/events/*/comments/*"), Some(vec![60, 23]));
+}
+
 fn extract_body(request: Request<Body>, body_handler: fn(chunk: hyper::Chunk) -> ResponseFuture) -> ResponseFuture {
     Box::new(
         request
