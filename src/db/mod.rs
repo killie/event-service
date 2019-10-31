@@ -13,3 +13,9 @@ pub fn connect_to_db() -> Result<Connection, Error> {
     let result = Connection::connect(db_url, TlsMode::None);
     result
 }
+
+pub fn run_updates() -> Result<(), Error> {
+    let connection = connect_to_db()?;
+    // Create tables
+    Ok(())
+}
