@@ -4,21 +4,23 @@
 
 https://www.rust-lang.org/tools/install
 
-## Install Diesel CLI for PostgreSQL
+# Database setup
 
-`$ cargo install diesel_cli --no-default-features --features postgres`
-
-Was missing -lpq when compiling diesel_cli. Fixed by installing `libpq-dev`.
-
-## Create database
-
-Put *DATABASE_URL* string in *.env* file on root. Example content:
+Put **DATABASE_URL** string in *.env* file on project root. Example content:
 
 `DATABASE_URL=postgres://username:password@localhost:5432/event_service`
 
-Install PostgreSQL on your system and ensure the credentials above can access named database.
+Install PostgreSQL on your system and ensure the credentials above can access 'event_service' database.
 
-Run `diesel migration run` and verify your database now has two tables: *events* and *comments*.
+If you're starting from scratch you can follow these steps using *psql* with *postgres* user:
+
+- $ `sudo -i -u postgres`
+- $ `psql`
+- postgres=# `CREATE USER username WITH PASSWORD 'password';`
+- postgres=# `CREATE DATABASE event_service OWNER username;`
+- postgres=# `\q`
+
+Database tables will be created by event-service on startup if missing.
 
 # Running the service
 
