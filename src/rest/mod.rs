@@ -31,18 +31,23 @@ pub fn router(request: Request<Body>) -> ResponseFuture {
         }
 
     } else if let Some(ids) = match_paths(path, "/events/*/comments") {
-        let event_id = *ids.get(0).unwrap();
+        // Duplicating event_id in path and body, besides comment_id is unique across events
         match method {
-            &Method::GET => comments::get_comments_by_event_id(event_id),
-            &Method::POST => extract_body(request, comments::add_comment), // Duplicating event_id in path and body...
+            &Method::GET => {
+                let event_id = *ids.get(0).unwrap();
+                comments::get_comments_by_event_id(event_id)
+            },
+            &Method::POST => extract_body(request, comments::add_comment),
             _ => empty_response(StatusCode::NOT_FOUND),
         }
 
     } else if let Some(ids) = match_paths(path, "/events/*/comments/*") {
-        let comment_id = *ids.get(1).unwrap();
         match method {
             &Method::PUT => extract_body(request, comments::edit_comment),
-            &Method::DELETE => comments::delete_comment_by_id(comment_id),
+            &Method::DELETE => {
+                let comment_id = *ids.get(1).unwrap();
+                comments::delete_comment_by_id(comment_id)
+            },
             _ => empty_response(StatusCode::NOT_FOUND),
         }
 
@@ -128,6 +133,3 @@ fn empty_response(status_code: StatusCode) -> ResponseFuture {
             .unwrap()
     ))
 }
-
-
-
