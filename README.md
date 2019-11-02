@@ -4,7 +4,7 @@
 
 https://www.rust-lang.org/tools/install
 
-# Database setup
+## Database setup
 
 Put **DATABASE_URL** string in *.env* file on project root. Example content:
 
@@ -28,6 +28,6 @@ Database tables will be created by event-service on startup if missing.
 
 From another terminal you can try:
 
-`$ curl -i -X POST -H 'Content-Type: application/json' -d '{"event_id": 3, "user": "admin", "text": "A comment", "timestamp": 123}' http://localhost:3000/comments`
+`$ curl -i -X POST -H 'Content-Type: application/json' -d '{"event_id": 3, "user": "admin", "text": "A comment", "timestamp": 123}' http://localhost:3000/events/3/comments`
 
 Open the database (for instance with *pgAdmin*) and check that *comments* table contains the row.
