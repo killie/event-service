@@ -15,7 +15,31 @@ pub fn connect_to_db() -> Result<Connection, Error> {
 }
 
 pub fn run_updates() -> Result<(), Error> {
-    let connection = connect_to_db()?;
-    // Create tables
+    let conn = connect_to_db()?;
+    create_events_table(&conn)?;
+    create_comments_table(&conn)?;
     Ok(())
+}
+
+fn create_events_table(conn: &Connection) -> Result<u64, Error> {
+    let command = "CREATE TABLE IF NOT EXISTS events (
+                   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                   \"from\" BIGINT,
+                   \"to\" BIGINT,
+                   origin_id INTEGER,
+                   event_type INTEGER,
+                   message TEXT);";
+
+    conn.execute(command, &[])
+}
+
+fn create_comments_table(conn: &Connection) -> Result<u64, Error> {
+    let command = "CREATE TABLE IF NOT EXISTS comments (
+                   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                   event_id INTEGER,
+                   username TEXT,
+                   message TEXT,
+                   timestamp BIGINT);";
+
+    conn.execute(command, &[])
 }

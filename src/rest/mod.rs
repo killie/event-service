@@ -41,7 +41,7 @@ pub fn router(request: Request<Body>) -> ResponseFuture {
     } else if let Some(ids) = match_paths(path, "/events/*/comments/*") {
         let comment_id = *ids.get(1).unwrap();
         match method {
-            &Method::PUT => error_result(1, "Not implemented"),
+            &Method::PUT => extract_body(request, comments::edit_comment),
             &Method::DELETE => comments::delete_comment_by_id(comment_id),
             _ => empty_response(StatusCode::NOT_FOUND),
         }

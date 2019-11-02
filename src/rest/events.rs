@@ -17,15 +17,15 @@ pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
         Ok(event) => {
             // Connecting to database
             match db::connect_to_db() {
-                Ok(connection) => {
+                Ok(conn) => {
                     // Saving to events table
-                    match db::events::create_event(event, &connection) {
+                    match db::events::create_event(event, &conn) {
                         Ok(id) => {
                             println!("id: {}", id);
                             super::id_response(id)
                         },
-                        Err(error) => {
-                            println!("Could not add record to database: {}", error);
+                        Err(e) => {
+                            println!("Could not add record to database: {}", e);
                             super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                         }
                     }
@@ -46,7 +46,7 @@ pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
 pub fn get_events(path: &str) -> ResponseFuture {
     // Connecting to database
     match db::connect_to_db() {
-        Ok(connection) => {
+        Ok(conn) => {
             // TODO: Extract valid fields from path
             let filter = db::events::EventFilter {
                 origin: Some(String::from("O")),
@@ -54,14 +54,14 @@ pub fn get_events(path: &str) -> ResponseFuture {
                 after: None,
                 before: None,
             };
-            match db::events::get_events(filter, &connection) {
+            match db::events::get_events(filter, &conn) {
                 Ok(events) => {
                     let events = serde_json::to_string(&events).unwrap();
                     let envelope = envelope::success_from_str(events);
                     super::send_result(&envelope)
                 },
-                Err(error) => {
-                    println!("Error loading comments");
+                Err(e) => {
+                    println!("Error loading comments: {}", e);
                     super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
                 },
             }

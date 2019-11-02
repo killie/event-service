@@ -45,5 +45,6 @@ pub fn delete_comment(id: CommentId, conn: &Connection) -> Result<u64, Error> {
 }
 
 pub fn edit_comment(id: CommentId, text: String, conn: &Connection) -> Result<u64, Error> {
+    // TODO: Keep track of history instead of deleting comment and overwriting, set status (deleted, replaced)
     conn.execute("UPDATE comments SET message = $1 WHERE id = $2", &[&text, &id])
 }

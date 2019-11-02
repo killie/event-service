@@ -61,3 +61,10 @@ pub struct NewComment {
     pub text: String,
     pub timestamp: i64,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EditComment {
+    pub id: i32,
+    pub text: String,
+    pub timestamp: i64,
+}
