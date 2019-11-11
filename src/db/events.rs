@@ -34,7 +34,7 @@ pub fn create_event(e: dto::NewEvent, conn: &Connection) -> Result<EventId, Erro
 #[derive(Debug)]
 pub struct EventFilter {
     pub origin: Option<String>,
-    pub event_type: Option<String>,
+    pub event_type: Option<i32>,
     pub after: Option<i64>,
     pub before: Option<i64>,
 }
@@ -46,6 +46,12 @@ impl EventFilter {
 	    Some(text) => {
 		let args: Vec<&str> = text.split('&').collect();
 		println!("query: {} length: {}", text, args.len());
+		let mut filter = EventFilter {
+		    origin: None,
+		    event_type: None,
+		    after: None,
+		    before: None,
+		};
 		for arg in &args {
 		    let pair: Vec<&str> = arg.split('=').collect();
 		    if pair.len() != 2 {
@@ -54,19 +60,23 @@ impl EventFilter {
 		    let key = pair.get(0).unwrap();
 		    let value = pair.get(1).unwrap();
 		    match *key {
-			"origin" => println!("origin = {}", value),
-			"event_type" => println!("event_type = {}", value),
-			"after" => println!("after = {}", value),
-			"before" => println!("before = {}", value),
-			_ => return Err("Invalid key".to_string()),
+			"origin" => println!("origin = {}", value), // Handle "Field:F -> System:Of a down"
+			"event_type" => match value.parse::<i32>() {
+			    Err(_) => return Err("Invalid value.".to_string()),
+			    Ok(value) => filter.event_type = Some(value),
+			},
+			"after" => match value.parse::<i64>() {
+			    Err(_) => return Err("Invalid value.".to_string()),
+			    Ok(value) => filter.after = Some(value),
+			},
+			"before" => match value.parse::<i64>() {
+			    Err(_) => return Err("Invalid value.".to_string()),
+			    Ok(value) => filter.before = Some(value),
+			},
+			_ => return Err("Invalid key.".to_string()),
 		    }
 		}
-		Ok(EventFilter {
-		    origin: None,
-		    event_type: Some(1.to_string()),
-		    after: Some(1),
-		    before: Some(1),
-		})
+		Ok(filter)
 	    },
 	}
     }
@@ -76,9 +86,15 @@ impl EventFilter {
 fn test_event_filter_errors() {
     assert_eq!(EventFilter::from_query(None).err(), Some(String::from("Missing query.")));
     assert_eq!(EventFilter::from_query(Some("")).err(), Some(String::from("Invalid argument.")));
-
-
+    assert_eq!(EventFilter::from_query(Some("foo=bar")).err(), Some(String::from("Invalid key.")));
 }
+
+/*
+#[test]
+fn test_event_filter_values() {
+    assert_eq!(EventFilter::from_query(Some("after=23")).ok().after, Some(23));
+}
+*/
 
 pub fn get_events(filter: EventFilter, conn: &Connection) -> Result<Vec<dto::Event>, Error> {
     println!("TODO: Filter events on {:?}", filter);
