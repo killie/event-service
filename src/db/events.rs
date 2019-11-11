@@ -39,6 +39,47 @@ pub struct EventFilter {
     pub before: Option<i64>,
 }
 
+impl EventFilter {
+    pub fn from_query(query: Option<&str>) -> Result<EventFilter, String> {
+	match query {
+	    None => Err("Missing query.".to_string()),
+	    Some(text) => {
+		let args: Vec<&str> = text.split('&').collect();
+		println!("query: {} length: {}", text, args.len());
+		for arg in &args {
+		    let pair: Vec<&str> = arg.split('=').collect();
+		    if pair.len() != 2 {
+			return Err("Invalid argument.".to_string());
+		    }
+		    let key = pair.get(0).unwrap();
+		    let value = pair.get(1).unwrap();
+		    match *key {
+			"origin" => println!("origin = {}", value),
+			"event_type" => println!("event_type = {}", value),
+			"after" => println!("after = {}", value),
+			"before" => println!("before = {}", value),
+			_ => return Err("Invalid key".to_string()),
+		    }
+		}
+		Ok(EventFilter {
+		    origin: None,
+		    event_type: Some(1.to_string()),
+		    after: Some(1),
+		    before: Some(1),
+		})
+	    },
+	}
+    }
+}
+
+#[test]
+fn test_event_filter_errors() {
+    assert_eq!(EventFilter::from_query(None).err(), Some(String::from("Missing query.")));
+    assert_eq!(EventFilter::from_query(Some("")).err(), Some(String::from("Invalid argument.")));
+
+
+}
+
 pub fn get_events(filter: EventFilter, conn: &Connection) -> Result<Vec<dto::Event>, Error> {
     println!("TODO: Filter events on {:?}", filter);
     Ok(vec![])

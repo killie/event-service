@@ -43,32 +43,29 @@ pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
     }
 }
 
-pub fn get_events(path: &str) -> ResponseFuture {
-    // Connecting to database
-    match db::connect_to_db() {
-        Ok(conn) => {
-            // TODO: Extract valid fields from path
-            let filter = db::events::EventFilter {
-                origin: Some(String::from("O")),
-                event_type: None,
-                after: None,
-                before: None,
-            };
-            match db::events::get_events(filter, &conn) {
-                Ok(events) => {
-                    let events = serde_json::to_string(&events).unwrap();
-                    let envelope = envelope::success_from_str(events);
-                    super::send_result(&envelope)
-                },
-                Err(e) => {
-                    println!("Error loading comments: {}", e);
-                    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
-                },
-            }
-        },
-        Err(_) => {
-            println!("Could not connect to database.");
-            super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
-        },
+pub fn get_events(query: Option<&str>) -> ResponseFuture {
+    match db::events::EventFilter::from_query(query) {
+	Err(_) => super::empty_response(StatusCode::BAD_REQUEST),
+	Ok(filter) => {
+	    match db::connect_to_db() {
+		Ok(conn) => {
+		    match db::events::get_events(filter, &conn) {
+			Ok(events) => {
+			    let events = serde_json::to_string(&events).unwrap();
+			    let envelope = envelope::success_from_str(events);
+			    super::send_result(&envelope)
+			},
+			Err(e) => {
+			    println!("Error loading comments: {}", e);
+			    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
+			},
+		    }
+		},
+		Err(_) => {
+		    println!("Could not connect to database.");
+		    super::empty_response(StatusCode::INTERNAL_SERVER_ERROR)
+		},
+	    }
+	},
     }
 }

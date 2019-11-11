@@ -18,7 +18,7 @@ pub fn router(request: Request<Body>) -> ResponseFuture {
 
     if let Some(_) = match_paths(path, "/events") {
         match method {
-            &Method::GET => events::get_events(path),
+            &Method::GET => events::get_events(request.uri().query()),
             &Method::POST => extract_body(request, events::add_event),
             _ => empty_response(StatusCode::NOT_FOUND),
         }
