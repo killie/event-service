@@ -17,6 +17,7 @@ pub fn connect_to_db() -> Result<Connection, Error> {
 pub fn run_updates() -> Result<(), Error> {
     let conn = connect_to_db()?;
     create_events_table(&conn)?;
+    create_origins_table(&conn)?;
     create_comments_table(&conn)?;
     Ok(())
 }
@@ -29,6 +30,14 @@ fn create_events_table(conn: &Connection) -> Result<u64, Error> {
                    origin_id INTEGER,
                    event_type INTEGER,
                    message TEXT);";
+
+    conn.execute(command, &[])
+}
+
+fn create_origins_table(conn: &Connection) -> Result<u64, Error> {
+    let command = "CREATE TABLE IF NOT EXISTS origins (
+                   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                   origin TEXT);";
 
     conn.execute(command, &[])
 }

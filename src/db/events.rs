@@ -1,4 +1,4 @@
-use postgres::{Connection, error::Error};
+use postgres::{Connection, error::Error, types::ToSql};
 use crate::rest::dto;
 
 type EventId = i32;
@@ -40,12 +40,16 @@ pub struct EventFilter {
 }
 
 impl EventFilter {
+    pub fn is_empty(&self) -> bool {
+	self.origin.is_none() && self.event_type.is_none() && self.after.is_none() && self.before.is_none()
+    }
+
     pub fn from_query(query: Option<&str>) -> Result<EventFilter, String> {
 	match query {
 	    None => Err("Missing query.".to_string()),
 	    Some(text) => {
 		let args: Vec<&str> = text.split('&').collect();
-		println!("query: {} length: {}", text, args.len());
+		//println!("query: {} length: {}", text, args.len());
 		let mut filter = EventFilter {
 		    origin: None,
 		    event_type: None,
@@ -60,7 +64,10 @@ impl EventFilter {
 		    let key = pair.get(0).unwrap();
 		    let value = pair.get(1).unwrap();
 		    match *key {
-			"origin" => println!("origin = {}", value), // Handle "Field:F -> System:Of a down"
+			"origin" => {
+			    println!("Found origin = {}", value); // Handle "Field:F -> With:Strangê chars
+			    filter.origin = Some(value.to_string());
+			},
 			"event_type" => match value.parse::<i32>() {
 			    Err(_) => return Err("Invalid value.".to_string()),
 			    Ok(value) => filter.event_type = Some(value),
@@ -96,8 +103,27 @@ fn test_event_filter_values() {
 }
 */
 
+// filter is never empty here
 pub fn get_events(filter: EventFilter, conn: &Connection) -> Result<Vec<dto::Event>, Error> {
-    println!("TODO: Filter events on {:?}", filter);
+    let mut query: String = "
+  SELECT e.id, \"e.from\", \"e.to\", o.origin, event_type, message
+  FROM events e LEFT origins o ON e.origin_id = o.id
+  WHERE ".to_string();
+
+    //let mut params: Vec<ToSql> = Vec::new();
+    let mut params: Vec<String> = Vec::new();
+
+    if filter.origin.is_some() {
+	params.push(filter.origin.unwrap());
+	query.push_str(&format!("o.origin LIKE ${}*", params.len()));
+    }
+
+    /*
+    if filter.after.is_some() {
+	query.push_str("\"e.to\" < $
+    */
+
+    println!("{}", query);
     Ok(vec![])
 }
 

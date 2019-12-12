@@ -45,8 +45,15 @@ pub fn add_event(chunk: hyper::Chunk) -> ResponseFuture {
 
 pub fn get_events(query: Option<&str>) -> ResponseFuture {
     match db::events::EventFilter::from_query(query) {
-	Err(_) => super::empty_response(StatusCode::BAD_REQUEST),
+	Err(message) => {
+	    println!("Could not create event filter: {}", message);
+	    super::empty_response(StatusCode::BAD_REQUEST)
+	},
 	Ok(filter) => {
+	    if filter.is_empty() {
+		println!("Event filter is empty");
+		return super::empty_response(StatusCode::BAD_REQUEST);
+	    }
 	    match db::connect_to_db() {
 		Ok(conn) => {
 		    match db::events::get_events(filter, &conn) {
